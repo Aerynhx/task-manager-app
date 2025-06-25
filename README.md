@@ -2,16 +2,16 @@
 
 # Key Features
 
-task creation: add tasks with just a title, or include a description for more context
-one tap completion: marks tasks as completed with a satisfying visual confirmation
-deletion: remove tasks that are no longer needed
-task list: see all tasks in an organized list
-scheduling: set start and end times for any task using an intuitive date picker
-smart date display: tomorrow / today instead of wonky date and time formats
-sorting: organizes list by start time
-search: Find any task by typing part of its title or description
-filtering: toggle between all, completed, and not completed tasks
-identical color themes: switches to light and dark mode based on your device settings. both are identical in design
+#task creation: add tasks with just a title, or include a description for more context
+#one tap completion: marks tasks as completed with a satisfying visual confirmation
+#deletion: remove tasks that are no longer needed
+#task list: see all tasks in an organized list
+#scheduling: set start and end times for any task using an intuitive date picker
+#smart date display: tomorrow / today instead of wonky date and time formats
+#sorting: organizes list by start time
+#search: Find any task by typing part of its title or description
+#filtering: toggle between all, completed, and not completed tasks
+#identical color themes: switches to light and dark mode based on your device settings. both are identical in design
 
 # Getting Started
 
