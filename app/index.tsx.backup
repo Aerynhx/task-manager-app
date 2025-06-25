@@ -1,0 +1,593 @@
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from 'react';
+import { FlatList, FlexAlignType, Keyboard, Modal, Platform, StyleSheet, TextInput, TouchableOpacity, View, ViewStyle } from 'react-native';
+
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  startTime: Date;
+  endTime: Date;
+}
+
+type FilterType = 'all' | 'completed' | 'not_completed';
+
+// Utility function for smart date/time formatting
+const formatSmartDateTime = (date: Date): string => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  
+  const diffTime = taskDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return timeString; // Just show time for today
+  } else if (diffDays === 1) {
+    return `Tomorrow ${timeString}`;
+  } else if (diffDays === -1) {
+    return `Yesterday ${timeString}`;
+  } else if (diffDays > 1 && diffDays <= 7) {
+    return `${date.toLocaleDateString('en-US', { weekday: 'short' })} ${timeString}`;
+  } else {
+    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${timeString}`;
+  }
+};
+
+export default function HomeScreen() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [startTime, setStartTime] = useState<Date>(new Date());
+  const [endTime, setEndTime] = useState<Date>(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [tempDate, setTempDate] = useState<Date>(new Date());
+  const [pickerType, setPickerType] = useState<'start' | 'end' | null>(null);
+  const colorScheme = useColorScheme() ?? 'light';
+  const themeColors = {
+    ...Colors[colorScheme],
+    background: colorScheme === 'dark' ? '#000' : '#F2F2F7',
+    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+    input: colorScheme === 'dark' ? '#1C1C1E' : '#E3E3E8',
+    searchInput: colorScheme === 'dark' ? '#1C1C1E' : '#E3E3E8',
+  };
+
+  const modalContent: ViewStyle = {
+    backgroundColor: themeColors.card,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center' as FlexAlignType,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  };
+
+  const addTask = () => {
+    if (title.trim()) {
+      const newTask: Task = {
+        id: Date.now().toString(),
+        title: title.trim(),
+        description: description.trim(),
+        completed: false,
+        startTime,
+        endTime,
+      };
+      setTasks(prev =>
+        [...prev, newTask].sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+      );
+      setTitle('');
+      setDescription('');
+      setStartTime(new Date());
+      setEndTime(new Date());
+      Keyboard.dismiss();
+    }
+  };
+
+  const toggleTask = (id: string) => {
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    );
+  };
+
+  const deleteTask = (id: string) => {
+    setTasks(prev => prev.filter(task => task.id !== id));
+  };
+
+  const filteredTasks = tasks
+    .filter(task => {
+      const searchText = search.toLowerCase();
+      const titleMatch = task.title.toLowerCase().includes(searchText);
+      const descriptionMatch = task.description.toLowerCase().includes(searchText);
+      const searchMatch = titleMatch || descriptionMatch;
+      
+      return searchMatch &&
+        (filter === 'all' || (filter === 'completed' && task.completed) || (filter === 'not_completed' && !task.completed));
+    })
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+  return (
+    <ThemedView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      {/* Filter Section */}
+      <ThemedView style={[styles.iosSection, styles.segmentedSection, styles.sectionSpacing, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.segmentedControlContainer, { backgroundColor: themeColors.background }]}>
+          {['all', 'completed', 'not_completed'].map((key, idx) => (
+            <TouchableOpacity
+              key={key}
+              style={[
+                styles.segmentedControlButton,
+                { borderColor: themeColors.background },
+                filter === key && { backgroundColor: themeColors.input, borderColor: themeColors.secondaryText },
+                idx === 0 && { borderTopLeftRadius: 999, borderBottomLeftRadius: 999 },
+                idx === 2 && { borderTopRightRadius: 999, borderBottomRightRadius: 999 },
+              ]}
+              onPress={() => setFilter(key as FilterType)}
+              activeOpacity={0.8}
+            >
+              <ThemedText style={[
+                styles.segmentedControlText,
+                { color: themeColors.secondaryText },
+                filter === key && { color: themeColors.mainText },
+              ]}>
+                {key === 'all' ? 'All' : key === 'completed' ? 'Completed' : 'Not Completed'}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ThemedView>
+      {/* Search Bar Section */}
+      <ThemedView style={[styles.iosSection, styles.sectionSpacing, styles.pillSection, { backgroundColor: themeColors.searchInput, flexDirection: 'row', alignItems: 'center' }]}>
+        <IconSymbol
+          name="magnifyingglass"
+          size={20}
+          color={themeColors.secondaryText}
+          style={{ marginLeft: 14, marginRight: 8 }}
+        />
+        <TextInput
+          style={[styles.iosSearchBar, styles.pillInput, styles.pillPadding, { backgroundColor: themeColors.searchInput, color: themeColors.mainText, flex: 1, paddingLeft: 0 }]}
+          placeholder="Search"
+          placeholderTextColor={themeColors.secondaryText}
+          value={search}
+          onChangeText={setSearch}
+          clearButtonMode="while-editing"
+        />
+      </ThemedView>
+      {/* Add Task Section */}
+      <ThemedView style={[styles.iosSection, styles.iosAddSection, styles.pillSection, styles.sectionSpacing, { backgroundColor: themeColors.card, flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: 16 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <IconSymbol
+              name="calendar"
+              size={18}
+              color={themeColors.secondaryText}
+              style={{ marginLeft: 12, marginRight: 8 }}
+            />
+            <TextInput
+              style={[styles.iosInput, styles.pillInput, styles.compactPadding, { backgroundColor: themeColors.card, color: themeColors.mainText, flex: 1, paddingLeft: 0 }]}
+              placeholder="Title"
+              placeholderTextColor={themeColors.secondaryText}
+              value={title}
+              onChangeText={setTitle}
+              returnKeyType="next"
+            />
+          </View>
+          <TouchableOpacity style={[styles.addButtonCompact, { marginRight: 12 }]} onPress={addTask} accessibilityLabel="Add task">
+            <IconSymbol name="plus" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TextInput
+            style={[styles.iosInput, styles.pillInput, styles.compactPadding, { backgroundColor: themeColors.card, color: themeColors.mainText, flex: 1, paddingLeft: 32, marginLeft: 12, marginRight: 12 }]}
+            placeholder="Description"
+            placeholderTextColor={themeColors.secondaryText}
+            value={description}
+            onChangeText={setDescription}
+            returnKeyType="done"
+          />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4, marginHorizontal: 12, marginBottom: 12 }}>
+          <TouchableOpacity
+            style={[styles.compactDateButton, { backgroundColor: '#3B82F7', flex: 1 }]}
+            onPress={() => { setPickerType('start'); setTempDate(startTime); setShowStartPicker(true); }}
+            accessibilityLabel="Pick start time"
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <IconSymbol name="clock" size={18} color="#fff" />
+              <ThemedText style={[styles.compactDateText, { color: '#fff' }]}>
+                {formatSmartDateTime(startTime)}
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
+          <ThemedText style={{ color: themeColors.secondaryText, fontSize: 12, fontWeight: '500', minWidth: 20, textAlign: 'center' }}>to</ThemedText>
+          <TouchableOpacity
+            style={[styles.compactDateButton, { backgroundColor: '#EB5545', flex: 1 }]}
+            onPress={() => { setPickerType('end'); setTempDate(endTime); setShowEndPicker(true); }}
+            accessibilityLabel="Pick end time"
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <IconSymbol name="clock" size={18} color="#fff" />
+              <ThemedText style={[styles.compactDateText, { color: '#fff' }]}>
+                {formatSmartDateTime(endTime)}
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ThemedView>
+      {/* DateTimePicker Modal */}
+      <Modal
+        visible={showStartPicker || showEndPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setShowStartPicker(false); setShowEndPicker(false); setPickerType(null); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={modalContent}>
+            <DateTimePicker
+              value={tempDate}
+              mode="datetime"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={(_, selectedDate) => {
+                if (selectedDate) setTempDate(selectedDate);
+              }}
+              style={{ backgroundColor: themeColors.card, borderRadius: 16 }}
+            />
+            <TouchableOpacity
+              style={[styles.checkButton, { backgroundColor: '#3B82F7' }]}
+              onPress={() => {
+                if (pickerType === 'start') setStartTime(tempDate);
+                if (pickerType === 'end') setEndTime(tempDate);
+                setShowStartPicker(false);
+                setShowEndPicker(false);
+                setPickerType(null);
+              }}
+              accessibilityLabel="Confirm date and time"
+            >
+              <IconSymbol name="checkmark" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      {/* Task List Section */}
+      <ThemedView style={[styles.iosSection, styles.iosTaskListSection, { backgroundColor: themeColors.background }]}>
+        <FlatList
+          data={filteredTasks}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <>
+              <ThemedView style={[styles.taskCard, { backgroundColor: themeColors.background }]}> 
+                <View style={{ paddingHorizontal: 16, paddingVertical: 12, width: '100%' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <TouchableOpacity
+                        style={[
+                          styles.iosCheckbox,
+                          styles.pillCheckbox,
+                          { borderColor: themeColors.secondaryText, backgroundColor: themeColors.background },
+                          item.completed && { borderColor: themeColors.mainText, backgroundColor: themeColors.background },
+                        ]}
+                        onPress={() => toggleTask(item.id)}
+                        accessibilityLabel={item.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                      >
+                        {item.completed && <View style={[styles.iosCheckboxInner, { backgroundColor: themeColors.secondaryText, borderRadius: 999 }]} />}
+                      </TouchableOpacity>
+                      <ThemedText
+                        style={[styles.taskText, { color: themeColors.mainText, marginLeft: 12, flexShrink: 1 }, item.completed && styles.taskTextCompleted]}
+                        numberOfLines={1}
+                      >
+                        {item.title}
+                      </ThemedText>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.deleteButton, { marginLeft: 8 }]}
+                      onPress={() => deleteTask(item.id)}
+                      accessibilityLabel="Delete task"
+                    >
+                      <ThemedText style={[styles.deleteText, { color: themeColors.secondaryText }]}>✕</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                  {item.description.trim() && (
+                    <ThemedText style={[styles.dateText, { color: themeColors.secondaryText, marginLeft: 44, marginTop: 2 }]}> 
+                      {item.description}
+                    </ThemedText>
+                  )}
+                  <ThemedText style={[styles.dateText, { color: themeColors.secondaryText, marginLeft: 44 }]}> 
+                    {item.startTime.toLocaleDateString()} {item.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {item.endTime.toLocaleDateString()} {item.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </ThemedText>
+                </View>
+              </ThemedView>
+              <View style={styles.taskSeparator} />
+            </>
+          )}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 20 }]}
+          ListEmptyComponent={<ThemedText style={[styles.emptyText, { color: themeColors.secondaryText }]}>Add tasks to get started.</ThemedText>}
+          keyboardShouldPersistTaps="handled"
+        />
+      </ThemedView>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 0,
+    paddingTop: Platform.OS === 'android' ? 40 : 60,
+    paddingHorizontal: 16,
+    gap: 0,
+  },
+  iosSection: {
+    borderRadius: 0,
+    marginBottom: 0,
+    marginTop: 0,
+    padding: 0,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    marginHorizontal: 0,
+    marginVertical: 0,
+  },
+  iosSearchBar: {
+    borderRadius: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 17,
+    margin: 0,
+    borderWidth: 0,
+  },
+  segmentedSection: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginBottom: 0,
+  },
+  segmentedControlContainer: {
+    flexDirection: 'row',
+    borderRadius: 0,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentedControlButton: {
+    flex: 1,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginLeft: 0,
+  },
+  segmentedControlText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  segmentedControlTextActive: {
+    fontWeight: '600',
+  },
+  iosAddSection: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    gap: 8,
+  },
+  iosInput: {
+    flex: 1,
+    borderRadius: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 17,
+    borderWidth: 0,
+  },
+  iosDateButton: {
+    borderRadius: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 0,
+  },
+  iosDateButtonText: {
+    fontSize: 15,
+  },
+  iosAddButton: {
+    borderRadius: 0,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  iosAddButtonText: {
+    fontSize: 28,
+    fontWeight: '600',
+    marginTop: -2,
+  },
+  iosTaskListSection: {
+    flex: 1,
+    marginTop: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    minHeight: 120,
+  },
+  taskCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 0,
+    padding: 0,
+    marginBottom: 0,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  iosCheckbox: {
+    width: 26,
+    height: 26,
+    borderRadius: 0,
+    borderWidth: 2,
+    marginRight: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iosCheckboxChecked: {},
+  iosCheckboxInner: {
+    width: 14,
+    height: 14,
+    borderRadius: 0,
+  },
+  taskText: {
+    fontSize: 17,
+    fontWeight: '500',
+  },
+  taskTextCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#aaa',
+  },
+  dateText: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  deleteButton: {
+    marginLeft: 0,
+    padding: 4,
+  },
+  deleteText: {
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  listContent: {
+    paddingBottom: 0,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16,
+  },
+  sectionSpacing: {
+    marginBottom: 18,
+  },
+  pillSection: {
+    borderRadius: 24,
+  },
+  pillInput: {
+    borderRadius: 24,
+  },
+  pillCheckbox: {
+    borderRadius: 24,
+  },
+  pillPadding: {
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  dateButton: {
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
+  },
+  dateButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  addButtonTight: {
+    borderRadius: 14,
+    width: 28,
+    height: 28,
+    backgroundColor: '#3B82F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  addButtonTextTight: {
+    fontWeight: '700',
+    fontSize: 20,
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkButton: {
+    marginTop: 16,
+    backgroundColor: '#3B82F7',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  taskSeparator: {
+    height: 1,
+    backgroundColor: '#333',
+    marginVertical: 4,
+    marginLeft: 44,
+  },
+  compactPadding: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  compactDateButton: {
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  compactDateText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  addButtonCompact: {
+    borderRadius: 14,
+    width: 28,
+    height: 28,
+    backgroundColor: '#3B82F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  addButtonTextCompact: {
+    fontWeight: '600',
+    fontSize: 24,
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+}); 

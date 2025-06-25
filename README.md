@@ -1,50 +1,51 @@
-# Welcome to your Expo app 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+# Key Features
 
-1. Install dependencies
+task creation: add tasks with just a title, or include a description for more context
+one tap completion: marks tasks as completed with a satisfying visual confirmation
+deletion: remove tasks that are no longer needed
+task list: see all tasks in an organized list
+scheduling: set start and end times for any task using an intuitive date picker
+smart date display: tomorrow / today instead of wonky date and time formats
+sorting: organizes list by start time
+search: Find any task by typing part of its title or description
+filtering: toggle between all, completed, and not completed tasks
+identical color themes: switches to light and dark mode based on your device settings. both are identical in design
 
-   ```bash
+# Getting Started
+
+
+Node.js
+npm or yarn
+Expo CLI
+
+
+1. get the project on your machine and navigate to the project folder
+   cd path/task-manager-app
+
+2. install all the necessary packages
    npm install
-   ```
 
-2. Start the app
-
-   ```bash
+3. start development server
    npx expo start
-   ```
 
-In the output, you'll find options to open the app in a
+4. run the app on your device
+scan the qr code for ios/android or pick the appropriate menu option for desired emulator, web is also an option and
+good for quick testing
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+# Core Framework
+React Native
+Expo
+React
 
-## Get a fresh project
+# User Interface & Design
+@expo/vector-icons - icons that work on both ios and android
+expo-symbols - apple's SF Symbols and google's material design icons
+custom style - built from scratch to provide an authentic ios feel
 
-When you're ready, run:
+# Date and Time Features
+@react-native-community/datetimepicker
 
-```bash
-npm run reset-project
-```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
