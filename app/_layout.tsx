@@ -1,10 +1,3 @@
-/**
- * Root Layout Configuration
- * 
- * This file sets up the overall app structure and navigation.
- * It handles theme switching and provides the basic navigation framework
- * for our single-screen task manager app.
- */
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
